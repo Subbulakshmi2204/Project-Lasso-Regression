@@ -5,19 +5,19 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error, r2_score
 
-# App title
+# Title
 st.title("🎓 Student Performance Prediction (Lasso Regression)")
 
-# File uploader (CSV + Excel)
+# File uploader
 uploaded_file = st.file_uploader(
-    "📂 Upload your dataset (CSV or Excel)", 
+    "📂 Upload dataset (CSV or Excel)",
     type=["csv", "xlsx"]
 )
 
 if uploaded_file is not None:
     try:
-        # Read file
-        if uploaded_file.name.endswith('.csv'):
+        # Load file
+        if uploaded_file.name.endswith(".csv"):
             df = pd.read_csv(uploaded_file)
         else:
             df = pd.read_excel(uploaded_file)
@@ -28,25 +28,28 @@ if uploaded_file is not None:
         st.subheader("📊 Dataset Preview")
         st.write(df.head())
 
-        st.write("🧾 Columns detected:", df.columns.tolist())
+        st.write("🧾 Columns:", df.columns.tolist())
 
-        # Dynamic feature selection
+        # Select features & target
         st.subheader("⚙️ Select Features and Target")
 
-        features = st.multiselect(
-            "Select Feature Columns", 
-            df.columns.tolist()
-        )
-
-        target = st.selectbox(
-            "Select Target Column", 
-            df.columns.tolist()
-        )
+        features = st.multiselect("Select Feature Columns", df.columns)
+        target = st.selectbox("Select Target Column", df.columns)
 
         if features and target:
 
             X = df[features]
             y = df[target]
+
+            # 🧠 HANDLE CATEGORICAL DATA
+
+            # Convert categorical target
+            if y.dtype == "object":
+                st.warning("⚠️ Target column is categorical. Encoding applied.")
+                y = pd.factorize(y)[0]
+
+            # Convert categorical features
+            X = pd.get_dummies(X, drop_first=True)
 
             # Train-test split
             X_train, X_test, y_train, y_test = train_test_split(
@@ -65,7 +68,7 @@ if uploaded_file is not None:
                 0.01, 1.0, 0.5
             )
 
-            # Train model
+            # Train Lasso model
             model = Lasso(alpha=alpha)
             model.fit(X_train_scaled, y_train)
 
@@ -80,26 +83,26 @@ if uploaded_file is not None:
             st.write(f"✅ Mean Squared Error: {mse:.2f}")
             st.write(f"✅ R² Score: {r2:.2f}")
 
-            # Coefficients
+            # Feature importance
             coef_df = pd.DataFrame({
-                'Feature': features,
-                'Coefficient': model.coef_
+                "Feature": X.columns,
+                "Coefficient": model.coef_
             })
 
             st.subheader("📊 Feature Importance (Lasso)")
             st.write(coef_df)
 
             # Important features
-            important = coef_df[coef_df['Coefficient'] != 0]
+            important = coef_df[coef_df["Coefficient"] != 0]
 
-            st.subheader("🔍 Important Features (Selected by Lasso)")
+            st.subheader("🔍 Important Features")
             if not important.empty:
                 st.write(important)
             else:
-                st.warning("⚠️ All coefficients are zero. Try reducing alpha.")
+                st.warning("⚠️ No important features found. Try lowering alpha.")
 
         else:
-            st.info("👆 Please select features and target column.")
+            st.info("👆 Please select feature and target columns.")
 
     except Exception as e:
         st.error(f"❌ Error: {e}")
