@@ -9,11 +9,17 @@ from sklearn.metrics import mean_squared_error, r2_score
 st.title("🎓 Student Performance Prediction using Lasso Regression")
 
 # Upload dataset
-uploaded_file = st.file_uploader("Upload student_data.csv", type=["csv"])
+uploaded_file = st.file_uploader(
+    "Upload dataset", 
+    type=["csv", "xlsx"]
+)
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-
+    # Check file type and read accordingly
+    if uploaded_file.name.endswith('.csv'):
+        df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file)
     st.subheader("📊 Dataset Preview")
     st.write(df.head())
 
