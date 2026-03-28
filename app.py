@@ -5,69 +5,104 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error, r2_score
 
-# Title
-st.title("🎓 Student Performance Prediction using Lasso Regression")
+# App title
+st.title("🎓 Student Performance Prediction (Lasso Regression)")
 
-# Upload dataset
+# File uploader (CSV + Excel)
 uploaded_file = st.file_uploader(
-    "Upload dataset", 
+    "📂 Upload your dataset (CSV or Excel)", 
     type=["csv", "xlsx"]
 )
 
 if uploaded_file is not None:
-    # Check file type and read accordingly
-    if uploaded_file.name.endswith('.csv'):
-        df = pd.read_csv(uploaded_file)
-    else:
-        df = pd.read_excel(uploaded_file)
-    st.subheader("📊 Dataset Preview")
-    st.write(df.head())
+    try:
+        # Read file
+        if uploaded_file.name.endswith('.csv'):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
 
-    # Features and target
-    X = df[['Hours_Studied', 'Attendance', 'Sleep_Hours',
-            'Previous_Scores', 'Internet_Usage']]
-    y = df['Final_Score']
+        # Clean column names
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+        st.subheader("📊 Dataset Preview")
+        st.write(df.head())
 
-    # Scaling
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+        st.write("🧾 Columns detected:", df.columns.tolist())
 
-    # Lasso model
-    alpha = st.slider("Select Alpha (Regularization Strength)", 0.01, 1.0, 0.5)
+        # Dynamic feature selection
+        st.subheader("⚙️ Select Features and Target")
 
-    model = Lasso(alpha=alpha)
-    model.fit(X_train_scaled, y_train)
+        features = st.multiselect(
+            "Select Feature Columns", 
+            df.columns.tolist()
+        )
 
-    # Prediction
-    y_pred = model.predict(X_test_scaled)
+        target = st.selectbox(
+            "Select Target Column", 
+            df.columns.tolist()
+        )
 
-    # Evaluation
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+        if features and target:
 
-    st.subheader("📈 Model Performance")
-    st.write(f"**Mean Squared Error:** {mse:.2f}")
-    st.write(f"**R² Score:** {r2:.2f}")
+            X = df[features]
+            y = df[target]
 
-    # Feature importance
-    st.subheader("📊 Feature Importance (Lasso Coefficients)")
-    coef_df = pd.DataFrame({
-        'Feature': X.columns,
-        'Coefficient': model.coef_
-    })
+            # Train-test split
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
 
-    st.write(coef_df)
+            # Scaling
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test)
 
-    # Highlight important features
-    st.subheader("🔍 Important Features")
-    important = coef_df[coef_df['Coefficient'] != 0]
-    st.write(important)
+            # Alpha slider
+            st.subheader("🎚️ Model Configuration")
+            alpha = st.slider(
+                "Select Alpha (Regularization Strength)",
+                0.01, 1.0, 0.5
+            )
+
+            # Train model
+            model = Lasso(alpha=alpha)
+            model.fit(X_train_scaled, y_train)
+
+            # Prediction
+            y_pred = model.predict(X_test_scaled)
+
+            # Evaluation
+            mse = mean_squared_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+
+            st.subheader("📈 Model Performance")
+            st.write(f"✅ Mean Squared Error: {mse:.2f}")
+            st.write(f"✅ R² Score: {r2:.2f}")
+
+            # Coefficients
+            coef_df = pd.DataFrame({
+                'Feature': features,
+                'Coefficient': model.coef_
+            })
+
+            st.subheader("📊 Feature Importance (Lasso)")
+            st.write(coef_df)
+
+            # Important features
+            important = coef_df[coef_df['Coefficient'] != 0]
+
+            st.subheader("🔍 Important Features (Selected by Lasso)")
+            if not important.empty:
+                st.write(important)
+            else:
+                st.warning("⚠️ All coefficients are zero. Try reducing alpha.")
+
+        else:
+            st.info("👆 Please select features and target column.")
+
+    except Exception as e:
+        st.error(f"❌ Error: {e}")
 
 else:
-    st.info("👆 Please upload your dataset to proceed.")
+    st.info("👆 Upload a dataset to begin.")
