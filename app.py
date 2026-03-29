@@ -6,9 +6,9 @@ from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error, r2_score
 
 # Title
-st.title("🎓 Student Performance Prediction (Lasso Regression)")
+st.title("🎓 Student Exam Score Prediction (Lasso Regression)")
 
-# File uploader
+# Upload file
 uploaded_file = st.file_uploader(
     "📂 Upload dataset (CSV or Excel)",
     type=["csv", "xlsx"]
@@ -16,7 +16,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
     try:
-        # Load file
+        # Read file
         if uploaded_file.name.endswith(".csv"):
             df = pd.read_csv(uploaded_file)
         else:
@@ -28,30 +28,26 @@ if uploaded_file is not None:
         st.subheader("📊 Dataset Preview")
         st.write(df.head())
 
-        st.write("🧾 Columns:", df.columns.tolist())
+        # 🎯 Target column
+        target = "exam_score"
 
-        # Select features & target
-        st.subheader("⚙️ Select Features and Target")
-
-        features = st.multiselect("Select Feature Columns", df.columns)
-        target = st.selectbox("Select Target Column", df.columns)
-
-        if features and target:
-
-            X = df[features]
+        # ❗ Check if target exists
+        if target not in df.columns:
+            st.error("❌ 'exam_score' column not found in dataset")
+        else:
+            # Features = all except target
+            X = df.drop(columns=[target])
             y = df[target]
 
-            # 🧠 HANDLE CATEGORICAL DATA
-
-            # Convert categorical target
+            # 🧠 Handle categorical target
             if y.dtype == "object":
-                st.warning("⚠️ Target column is categorical. Encoding applied.")
+                st.warning("⚠️ Encoding categorical target")
                 y = pd.factorize(y)[0]
 
-            # Convert categorical features
+            # 🧠 Handle categorical features
             X = pd.get_dummies(X, drop_first=True)
 
-            # Train-test split
+            # Split
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42
             )
@@ -63,12 +59,9 @@ if uploaded_file is not None:
 
             # Alpha slider
             st.subheader("🎚️ Model Configuration")
-            alpha = st.slider(
-                "Select Alpha (Regularization Strength)",
-                0.01, 1.0, 0.5
-            )
+            alpha = st.slider("Select Alpha", 0.01, 1.0, 0.5)
 
-            # Train Lasso model
+            # Model
             model = Lasso(alpha=alpha)
             model.fit(X_train_scaled, y_train)
 
@@ -89,7 +82,7 @@ if uploaded_file is not None:
                 "Coefficient": model.coef_
             })
 
-            st.subheader("📊 Feature Importance (Lasso)")
+            st.subheader("📊 Feature Importance")
             st.write(coef_df)
 
             # Important features
@@ -99,13 +92,10 @@ if uploaded_file is not None:
             if not important.empty:
                 st.write(important)
             else:
-                st.warning("⚠️ No important features found. Try lowering alpha.")
-
-        else:
-            st.info("👆 Please select feature and target columns.")
+                st.warning("⚠️ No important features selected. Try smaller alpha.")
 
     except Exception as e:
         st.error(f"❌ Error: {e}")
 
 else:
-    st.info("👆 Upload a dataset to begin.")
+    st.info("👆 Upload your dataset to begin")
